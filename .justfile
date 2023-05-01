@@ -1,22 +1,14 @@
 crun:
   #!/usr/bin/env bash
-  cd {{invocation_directory()}}/build; cmake --build . || exit 1; OMP_PROC_BIND=spread OMP_PLACES=threads ./$(pwd | sed -r 's/.*\/(.*)\/[Solution|Begin].*/\1/g')_Exercise
+  cd {{invocation_directory()}}/build; cmake --build . || exit 1; command ./$(fd -I --glob "*[Ee]xercise")
 
-runs:
+runh:
   #!/usr/bin/env bash
-  cd {{invocation_directory()}}; OMP_PROC_BIND=spread OMP_PLACES=threads ./$(pwd | sed -r 's/.*\/(.*)\/[Solution|Begin].*/\1/g')_Exercise.host
-
-runt:
-  #!/usr/bin/env bash
-  cd {{invocation_directory()}}; OMP_PROC_BIND=spread OMP_PLACES=threads ./$(pwd | sed -r 's/.*\/(.*)\/[Solution|Begin].*/\1/g')_Exercise.host
-
-runo:
-  #!/usr/bin/env bash
-  cd {{invocation_directory()}}; OMP_PROC_BIND=spread OMP_PLACES=threads ./$(pwd | sed -r 's/.*\/(.*)\/[Solution|Begin].*/\1/g')_Exercise.host
+  cd {{invocation_directory()}}; command ./$(fd -I --glob "*[Ee]xercise.host")
 
 rung:
   #!/usr/bin/env bash
-  cd {{invocation_directory()}}; OMP_PROC_BIND=spread OMP_PLACES=threads ./$(pwd | sed -r 's/.*\/(.*)\/[Solution|Begin].*/\1/g')_Exercise.cuda
+  cd {{invocation_directory()}}; command ./$(fd -I --glob "*[Ee]xercise.cuda")
 
 cconfig:
   #!/usr/bin/env bash
