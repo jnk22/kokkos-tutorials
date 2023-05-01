@@ -72,16 +72,13 @@
 // operations to help you manage memory take almost no time in that
 // case.  This makes your code even more performance portable.
 
-#include <vector>
-
 void load_state(view_type density, view_type temperature);
 void compute_pressure(view_type pressure, view_type density,
                       view_type temperature);
 void compute_internal_energy(view_type energy, view_type temperature);
-void compute_enthalpy(const int size, double* enthalpy, const double* energy,
-                      const double* pressure, const double* density);
-void check_results(view_type pressure, view_type energy,
-                   const double* enthalpy);
+void compute_enthalpy(view_type enthalpy, view_type energy, view_type pressure,
+                      view_type density);
+void check_results(view_type pressure, view_type energy, view_type enthalpy);
 
 int main(int narg, char* arg[]) {
   std::cout << "initializing kokkos....." << std::endl;
@@ -99,8 +96,7 @@ int main(int narg, char* arg[]) {
     view_type density("density", size);
     view_type temperature("temperature", size);
     view_type energy("energy", size);
-
-    std::vector<double> enthalpy(size, -1);
+    view_type enthalpy("enthalpy", size);
 
     load_state(density, temperature);
 
@@ -110,19 +106,9 @@ int main(int narg, char* arg[]) {
     for (size_t step = 0; step < maxSteps; ++step) {
       compute_pressure(pressure, density, temperature);
       compute_internal_energy(energy, temperature);
-
-      auto density_view = density.h_view;
-      auto pressure_view = pressure.h_view;
-      auto energy_view = energy.h_view;
-
-      density.sync<view_type::host_mirror_space>();
-      pressure.sync<view_type::host_mirror_space>();
-      energy.sync<view_type::host_mirror_space>();
-
-      compute_enthalpy(size, enthalpy.data(), energy_view.data(),
-                       pressure_view.data(), density_view.data());
+      compute_enthalpy(enthalpy, energy, pressure, density);
     }
-    check_results(pressure, energy, enthalpy.data());
+    check_results(pressure, energy, enthalpy);
   }
 
   Kokkos::finalize();
@@ -164,29 +150,16 @@ void compute_internal_energy(view_type energy, view_type temperature) {
   Kokkos::fence();
 }
 
-void compute_enthalpy(const int size, double* enthalpy, const double* energy,
-                      const double* pressure, const double* density) {
-  // EXERCISE: convert to run on device
-  // with DualViews.  use either a functor or a lambda
-
-  enthalpy.data().sync_device();
-  energy.data().sync_device();
-  pressure.data().sync_device();
-  density.data().sync_device();
-
-  auto d_enthalpy_data = enthalpy.data().view_data();
-  auto d_energy_data = enthalpy.data().view_data();
-  auto d_pressure_data = enthalpy.data().view_data();
-  auto d_density_data = enthalpy.data().view_data();
-
-  enthalpy.data().modify_device();
-
-  for (int i = 0; i < size; ++i) {
-    enthalpy[i] = energy[i] + pressure[i] / density[i];
-  }
+void compute_enthalpy(view_type enthalpy, view_type energy, view_type pressure,
+                      view_type density) {
+  const int size = energy.extent(0);
+  Kokkos::parallel_for(size, ComputeEnthalpy<view_type::execution_space>(
+                                 enthalpy, energy, pressure, density));
+  Kokkos::fence();
 }
+
 void check_results(view_type dv_pressure, view_type dv_energy,
-                   const double* enthalpy) {
+                   view_type dv_enthalpy) {
   const double R = ComputePressure<view_type::host_mirror_space>::gasConstant;
   const double thePressure = R * density_0 * temperature_0;
 
@@ -197,9 +170,11 @@ void check_results(view_type dv_pressure, view_type dv_energy,
 
   auto pressure = dv_pressure.h_view;
   auto energy = dv_energy.h_view;
+  auto enthalpy = dv_enthalpy.h_view;
 
   dv_pressure.sync<view_type::host_mirror_space>();
   dv_energy.sync<view_type::host_mirror_space>();
+  dv_enthalpy.sync<view_type::host_mirror_space>();
 
   double pressureError = 0;
   double energyError = 0;
@@ -208,7 +183,7 @@ void check_results(view_type dv_pressure, view_type dv_energy,
   for (int i = 0; i < size; ++i) {
     pressureError += (pressure(i) - thePressure) * (pressure(i) - thePressure);
     energyError += (energy(i) - theEnergy) * (energy(i) - theEnergy);
-    enthalpyError += (enthalpy[i] - theEnthalpy) * (enthalpy[i] - theEnthalpy);
+    enthalpyError += (enthalpy(i) - theEnthalpy) * (enthalpy(i) - theEnthalpy);
   }
 
   std::cout << "pressure error = " << pressureError << std::endl;

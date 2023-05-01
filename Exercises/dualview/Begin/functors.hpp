@@ -1,4 +1,3 @@
-
 /*
 //@HEADER
 // ************************************************************************
@@ -153,4 +152,47 @@ struct ComputeInternalEnergy {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int i) const { energy(i) = C_v * temperature(i); }
+};
+
+template <class ExecutionSpace>
+struct ComputeEnthalpy {
+  typedef ExecutionSpace execution_space;
+
+  typedef typename std::conditional<
+      std::is_same<ExecutionSpace, Kokkos::DefaultExecutionSpace>::value,
+      view_type::memory_space, view_type::host_mirror_space>::type memory_space;
+
+  Kokkos::View<view_type::scalar_array_type, view_type::array_layout,
+               memory_space>
+      enthalpy;
+  Kokkos::View<view_type::const_data_type, view_type::array_layout,
+               memory_space, Kokkos::MemoryRandomAccess>
+      energy;
+  Kokkos::View<view_type::const_data_type, view_type::array_layout,
+               memory_space, Kokkos::MemoryRandomAccess>
+      pressure;
+  Kokkos::View<view_type::const_data_type, view_type::array_layout,
+               memory_space, Kokkos::MemoryRandomAccess>
+      density;
+
+  ComputeEnthalpy(view_type dv_enthalpy, view_type dv_energy,
+                  view_type dv_pressure, view_type dv_density) {
+    enthalpy = dv_enthalpy.template view<memory_space>();
+    energy = dv_energy.template view<memory_space>();
+    pressure = dv_pressure.template view<memory_space>();
+    density = dv_density.template view<memory_space>();
+
+    dv_enthalpy.sync<memory_space>();
+    dv_energy.sync<memory_space>();
+    dv_pressure.sync<memory_space>();
+    dv_density.sync<memory_space>();
+
+    // Mark enthalpy as modified
+    dv_enthalpy.modify<memory_space>();
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int i) const {
+    enthalpy(i) = energy(i) + pressure(i) / density(i);
+  }
 };

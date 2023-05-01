@@ -4,11 +4,11 @@ crun:
 
 runh:
   #!/usr/bin/env bash
-  cd {{invocation_directory()}}; command ./$(fd -I --glob "*[Ee]xercise.host")
+  cd {{invocation_directory()}}; command ./$(fd -I --glob "*.host")
 
 rung:
   #!/usr/bin/env bash
-  cd {{invocation_directory()}}; command ./$(fd -I --glob "*[Ee]xercise.cuda")
+  cd {{invocation_directory()}}; command ./$(fd -I --glob "*.cuda")
 
 cconfig:
   #!/usr/bin/env bash

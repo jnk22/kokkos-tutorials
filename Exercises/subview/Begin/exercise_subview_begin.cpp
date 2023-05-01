@@ -76,16 +76,16 @@ int main(int argc, char *argv[]) {
   {
     // typedef Kokkos::Serial   ExecSpace;
     // typedef Kokkos::Threads  ExecSpace;
-    // typedef Kokkos::OpenMP   ExecSpace;
-    typedef Kokkos::Cuda ExecSpace;
+    typedef Kokkos::OpenMP ExecSpace;
+    // typedef Kokkos::Cuda ExecSpace;
 
     // typedef Kokkos::HostSpace     MemSpace;
-    // typedef Kokkos::OpenMP        MemSpace;
-    typedef Kokkos::CudaSpace MemSpace;
+    typedef Kokkos::OpenMP MemSpace;
+    // typedef Kokkos::CudaSpace MemSpace;
     // typedef Kokkos::CudaUVMSpace  MemSpace;
 
-    typedef Kokkos::LayoutLeft Layout;
-    // typedef Kokkos::LayoutRight  Layout;
+    // typedef Kokkos::LayoutLeft Layout;
+    typedef Kokkos::LayoutRight Layout;
 
     typedef Kokkos::RangePolicy<ExecSpace> range_policy;
 
@@ -139,14 +139,13 @@ int main(int argc, char *argv[]) {
 
             // EXERCISE create a subview for row j of matrix A
             // HINT: Use 'auto' to determine the type
-            auto s_Aj = Kokkos::subview(A, 0, Kokkos::ALL);
+            auto sv_Aj = Kokkos::subview(A, j, Kokkos::ALL);
 
             for (int i = 0; i < M; ++i) {
               // EXERCISE replace the A(j,:) in A(j,:) * x(:) multiplication
-              // with
-              //          row_j_of_A * x, using the subview of row j of A
+              // with row_j_of_A * x, using the subview of row j of A
               // temp2 += A(j, i) * x(i);
-              temp2 += s_Aj * x;
+              temp2 += sv_Aj(i) * x(i);
             }
 
             update += y(j) * temp2;
