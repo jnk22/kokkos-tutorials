@@ -1,3 +1,9 @@
+# List available commands.
+default:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    just --list
+
 crun:
   #!/usr/bin/env bash
   cd {{invocation_directory()}}/build; cmake --build . || exit 1; command ./$(fd -I --glob "*[Ee]xercise")
